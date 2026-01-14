@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>罗曼语族三语对比学习卡</title>
+    <style>
+        :root {
+            --fr-bg: #fff0f0; --it-bg: #f0fff0; --es-bg: #f0f0ff;
+            --accent: #5856d6;
+        }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            min-height: 100vh; margin: 0; 
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%); /* 渐变背景 */
+        }
+        
+        /* 闪卡容器 */
+        .card-container { width: 340px; height: 480px; perspective: 1000px; cursor: pointer; }
+        .card { 
+            width: 100%; height: 100%; position: relative; 
+            transform-style: preserve-3d; transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            border-radius: 24px; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15); 
+        }
+        .card.flipped { transform: rotateY(180deg); }
+        
+        .card-face { 
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            border-radius: 24px; background: rgba(255, 255, 255, 0.9); 
+            backdrop-filter: blur(10px); padding: 30px; box-sizing: border-box; 
+        }
+        
+        .card-front { font-size: 48px; color: #1d1d1f; font-weight: 800; }
+        .card-back { transform: rotateY(180deg); align-items: stretch; justify-content: space-around; }
+        
+        .lang-item { 
+            padding: 12px 20px; border-radius: 16px; position: relative;
+            transition: transform 0.2s; border: 1px solid rgba(0,0,0,0.05);
+        }
+        .lang-item:hover { transform: scale(1.02); }
+        .label { font-size: 11px; font-weight: 700; color: #8e8e93; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .word { font-size: 26px; color: #1c1c1e; font-weight: 600; }
+        
+        .fr { background: var(--fr-bg); } .it { background: var(--it-bg); } .es { background: var(--es-bg); }
+        
+        /* 按钮设计 */
+        .controls { margin-top: 40px; display: flex; gap: 15px; }
+        button { 
+            padding: 14px 28px; font-size: 16px; border: none; border-radius: 30px; 
+            background: white; color: #007aff; font-weight: 600;
+            cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease;
+        }
+        button.primary { background: #007aff; color: white; }
+        button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.15); }
+        button:active { transform: translateY(0); }
+
+        .tip-container { margin-top: 25px; height: 40px; text-align: center; }
+        .tip { font-size: 14px; color: #555; background: rgba(255,255,255,0.5); padding: 5px 15px; border-radius: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="card-container" onclick="flipCard()">
+        <div class="card" id="card">
+            <div class="card-face card-front"><div id="word-cn">...</div></div>
+            <div class="card-face card-back">
+                <div class="lang-item fr"><span class="label">Français</span><div class="word" id="word-fr"></div></div>
+                <div class="lang-item it"><span class="label">Italiano</span><div class="word" id="word-it"></div></div>
+                <div class="lang-item es"><span class="label">Español</span><div class="word" id="word-es"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tip-container"><span class="tip" id="memo">点击卡片翻转</span></div>
+
+    <div class="controls">
+        <button onclick="speakAll()">播放发音 🔊</button>
+        <button class="primary" onclick="nextCard()">下一个单词 →</button>
+    </div>
+
+    <script>
+        const words = [
+            { cn: "自然", fr: "Nature", it: "Natura", es: "Naturaleza", memo: "提示：词根Nat-源自拉丁语，意为‘出生’。" },
+            { cn: "大学", fr: "Université", it: "Università", es: "Universidad", memo: "提示：后缀 -té, -tà, -dad 具有对应性。" },
+            { cn: "自由", fr: "Liberté", it: "Libertà", es: "Libertad", memo: "提示：典型的罗曼语后缀变体。" },
+            { cn: "可能", fr: "Possible", it: "Possibile", es: "Posible", memo: "提示：拼写极其接近，注意双写s。" },
+            { cn: "重要", fr: "Important", it: "Importante", es: "Importante", memo: "提示：意、西拼写完全相同。" },
+            { cn: "城市", fr: "Ville", it: "Città", es: "Ciudad", memo: "提示：法语较特殊，意西更接近拉丁源词。" },
+            { cn: "音乐", fr: "Musique", it: "Musica", es: "Música", memo: "提示：发音极其相似，拼写依各语习惯。" },
+            { cn: "朋友", fr: "Ami", it: "Amico", es: "Amigo", memo: "提示：注意 c/g 的清浊辅音演变。" },
+            { cn: "时间", fr: "Temps", it: "Tempo", es: "Tiempo", memo: "提示：词根 Temp- 是一致的。" },
+            { cn: "学校", fr: "École", it: "Scuola", es: "Escuela", memo: "提示：注意词首 E/S 的变化规律。" }
+            // ... 已内置基础核心词汇，后续可通过AI继续扩充
+        ];
+
+        let currentIndex = 0;
+        const synth = window.speechSynthesis;
+
+        function flipCard() {
+            document.getElementById('card').classList.toggle('flipped');
+        }
+
+        function updateCard() {
+            const data = words[currentIndex];
+            document.getElementById('word-cn').innerText = data.cn;
+            document.getElementById('word-fr').innerText = data.fr;
+            document.getElementById('word-it').innerText = data.it;
+            document.getElementById('word-es').innerText = data.es;
+            document.getElementById('memo').innerText = data.memo;
+            document.getElementById('card').classList.remove('flipped');
+        }
+
+        function nextCard() {
+            currentIndex = (currentIndex + 1) % words.length;
+            updateCard();
+        }
+
+        function speakAll() {
+            const data = words[currentIndex];
+            const queue = [
+                { text: data.fr, lang: 'fr-FR' },
+                { text: data.it, lang: 'it-IT' },
+                { text: data.es, lang: 'es-ES' }
+            ];
+
+            queue.forEach((item, index) => {
+                const utterance = new SpeechSynthesisUtterance(item.text);
+                utterance.lang = item.lang;
+                utterance.rate = 0.9;
+                // 稍微延迟，避免声音重叠
+                setTimeout(() => synth.speak(utterance), index * 1200);
+            });
+        }
+
+        updateCard();
+    </script>
+</body>
+</html>
